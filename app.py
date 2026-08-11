@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 import altair as alt
 import streamlit as st
+from streamlit_extras.metric_cards import style_metric_cards
 
 import auth
 import db
@@ -13,11 +14,21 @@ import rewards
 
 st.set_page_config(page_title="Hourglass", page_icon="⏳", layout="centered")
 
-# Brand palette, lifted straight from assets/logo.svg.
+# Brand palette, lifted straight from assets/logo.svg. primaryColor/textColor
+# in .streamlit/config.toml already carry BRAND_INDIGO app-wide -- these
+# constants stay only for the places native theming can't reach: Altair
+# chart color scales and the tree/flame accent markup below.
 BRAND_INDIGO = "#2E2A5C"
 BRAND_AMBER = "#F2B94D"
 BRAND_ACCENT = "#E4572E"
 BRAND_GRAY = "#9a9a95"
+
+# 8px-grid spacing scale, used wherever a manual layout nudge is unavoidable
+# (e.g. vertically aligning a button next to a selectbox).
+SPACE_XS = "0.5rem"   # 8px
+SPACE_SM = "1rem"     # 16px
+SPACE_MD = "1.5rem"   # 24px
+SPACE_LG = "2rem"     # 32px
 
 # Validated categorical hues (fixed order -- never cycled), used for the
 # hours-by-category chart. Slots 7/2/4 already echo the brand's
@@ -56,32 +67,12 @@ def spin(message=None):
 
 
 def inject_css():
+    # Colors, button styling, and the active-tab indicator now all come from
+    # .streamlit/config.toml's [theme] block. Only layout the theme can't
+    # express -- text sizing/spacing for two custom markup rows -- stays here.
     st.markdown(
         f"""
         <style>
-        .stat-card {{
-            background: #ffffff08;
-            border: 1px solid #80808022;
-            border-left: 4px solid {BRAND_INDIGO};
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            height: 100%;
-        }}
-        .stat-card .stat-label {{
-            font-size: 0.8rem;
-            opacity: 0.7;
-            margin-bottom: 0.15rem;
-        }}
-        .stat-card .stat-value {{
-            font-size: 1.5rem;
-            font-weight: 700;
-        }}
-        .stat-card.stat-card-hero {{
-            border-left-color: {BRAND_ACCENT};
-        }}
-        .stat-card.stat-card-hero .stat-value {{
-            font-size: 2.1rem;
-        }}
         .takeaway-line {{
             font-size: 1.02rem;
             margin: 0.25rem 0 0.75rem 0;
@@ -91,41 +82,13 @@ def inject_css():
             line-height: 1.5;
             letter-spacing: 0.1rem;
         }}
-        div[data-testid="stButton"] button[kind="primary"],
-        div[data-testid="stFormSubmitButton"] button[kind="primary"] {{
-            background-color: {BRAND_INDIGO};
-            border-color: {BRAND_INDIGO};
-        }}
-        div[data-testid="stButton"] button[kind="primary"]:hover,
-        div[data-testid="stFormSubmitButton"] button[kind="primary"]:hover {{
-            background-color: {BRAND_ACCENT};
-            border-color: {BRAND_ACCENT};
-            color: white;
-        }}
         .stTabs [data-baseweb="tab-list"] {{
-            gap: 1.75rem;
-        }}
-        .stTabs [aria-selected="true"] {{
-            color: {BRAND_INDIGO};
+            gap: {SPACE_MD};
         }}
         </style>
         """,
         unsafe_allow_html=True,
     )
-
-
-def stat_card(col, label, value, icon="", hero=False):
-    with col:
-        css_class = "stat-card stat-card-hero" if hero else "stat-card"
-        st.markdown(
-            f"""
-            <div class="{css_class}">
-                <div class="stat-label">{icon} {label}</div>
-                <div class="stat-value">{value}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
 
 def show_logo(width=60):
@@ -142,7 +105,7 @@ def login_screen():
     with mid:
         show_logo(width=72)
         st.markdown(
-            f"<h2 style='text-align:center;color:{BRAND_INDIGO};margin-bottom:0'>Hourglass ⏳</h2>",
+            "<h2 style='text-align:center;margin-bottom:0'>Hourglass ⏳</h2>",
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -246,7 +209,7 @@ def logging_page(user_id):
         selected_category_name = st.selectbox("Category", category_names, key="selected_category")
     selected_category = next(c for c in categories if c["name"] == selected_category_name)
     with cat_add_col:
-        st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='height:{SPACE_MD}'></div>", unsafe_allow_html=True)
         with st.popover("➕", help="Add a new category"):
             _new_category_form(user_id)
 
@@ -256,7 +219,7 @@ def logging_page(user_id):
         selected_sub_name = st.selectbox("Sub-category", sub_options)
     selected_sub = next((s for s in sub_categories if s["name"] == selected_sub_name), None)
     with sub_add_col:
-        st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='height:{SPACE_MD}'></div>", unsafe_allow_html=True)
         with st.popover("➕", help=f"Add a sub-category to {selected_category_name}"):
             _new_sub_category_form(selected_category)
 
@@ -368,10 +331,14 @@ def insights_page(user_id):
 
     inject_css()
     c1, c2, c3, c4 = st.columns(4)
-    stat_card(c1, "Day streak", f"{streak}d {insights.streak_flame(streak)}", "", hero=True)
-    stat_card(c2, "Total hours logged", f"{total_hours_all_time:.1f}h", "⏳")
-    stat_card(c3, "Tokens earned", total_tokens_all_time, "🎟️")
-    stat_card(c4, "Trees grown", len(past_trees), "🌲")
+    with c1:
+        st.metric("Day streak", f"{streak}d {insights.streak_flame(streak)}", border=True)
+    with c2:
+        st.metric("Total hours logged", f"{total_hours_all_time:.1f}h", icon="⏳", border=True)
+    with c3:
+        st.metric("Tokens earned", total_tokens_all_time, icon="🎟️", border=True)
+    with c4:
+        st.metric("Trees grown", len(past_trees), icon="🌲", border=True)
 
     st.write("")
     heatmap_end = date.today()
@@ -419,7 +386,7 @@ def insights_page(user_id):
     with col2:
         end_date = st.date_input("To", value=date.today(), key="insights_end")
     with col3:
-        st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='height:{SPACE_MD}'></div>", unsafe_allow_html=True)
         show_sub = st.checkbox("By sub-category")
 
     with spin("Sorting hours into neat little piles..."):
@@ -579,6 +546,7 @@ def redeem_page(user_id):
 
 def main():
     inject_css()
+    style_metric_cards(border_left_color=BRAND_ACCENT, box_shadow=False)
 
     if "user" not in st.session_state:
         login_screen()
@@ -588,10 +556,7 @@ def main():
 
     header_left, header_right = st.columns([4, 1])
     with header_left:
-        st.markdown(
-            f"<h2 style='color:{BRAND_INDIGO};margin-bottom:0'>⏳ Hourglass</h2>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<h2 style='margin-bottom:0'>⏳ Hourglass</h2>", unsafe_allow_html=True)
     with header_right:
         st.markdown(
             f"<p style='text-align:right;opacity:0.7;margin-bottom:0.25rem'>{user['username']}</p>",

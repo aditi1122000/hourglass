@@ -1,0 +1,16 @@
+[theme]
+# Every color below traces back to assets/logo.svg -- nothing invented here.
+# Indigo (#2E2A5C) is the dominant ink in the wordmark/hourglass frame, so it
+# is the one primary color for buttons, active tabs, and focus rings.
+# secondaryBackgroundColor/borderColor are a 12%/35% white-blend of the
+# logo's amber (#F2B94D) sand fill, giving widget surfaces and borders a
+# warm tint instead of generic gray without introducing a new brand color.
+primaryColor = "#2E2A5C"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#FDF7EA"
+textColor = "#2E2A5C"
+borderColor = "#FAE6C1"
+font = "sans serif"
+baseRadius = "medium"
+buttonRadius = "medium"
+showWidgetBorder = true

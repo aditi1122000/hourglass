@@ -1,4 +1,5 @@
 streamlit
+streamlit-extras
 supabase
 bcrypt
 python-dotenv
