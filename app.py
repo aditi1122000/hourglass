@@ -38,32 +38,11 @@ CATEGORY_PALETTE = [
     "#e87ba4", "#008300", "#4a3aa7", "#e34948",
 ]
 
-SPINNER_MESSAGES = [
-    "Sharpening pencils...",
-    "Convincing the tree to grow faster...",
-    "Counting productive minutes...",
-    "Untangling the hourglass sand...",
-    "Bribing the productivity gremlins...",
-    "Consulting the sundial...",
-    "Watering yesterday's effort...",
-    "Filing hours into neat little piles...",
-    "Polishing today's timeline...",
-    "Waking up the token vault...",
-    "Doing the math so you don't have to...",
-    "Nudging the sand grains along...",
-    "Reticulating splines (productively)...",
-    "Checking in with your inner squirrel...",
-]
-
 CELEBRATION_MESSAGES = [
     "Token earned! Your tree just felt that.",
     "35%+ productive -- nicely done. Token unlocked!",
     "Hourglass approves. One token, freshly minted.",
 ]
-
-
-def spin(message=None):
-    return st.spinner(message or random.choice(SPINNER_MESSAGES))
 
 
 def inject_css():
@@ -127,7 +106,7 @@ def login_screen():
                 st.warning("A username and password are both required to get started.", icon="🙈")
                 return
 
-            with spin():
+            with st.spinner("Logging in..."):
                 existing = db.get_user_by_username(username)
                 if existing is None:
                     user = db.create_user(username, auth.hash_password(password))
@@ -161,7 +140,7 @@ def _new_category_form(user_id):
         is_productive = st.checkbox("Counts as productive?")
         if st.form_submit_button("Add category", type="primary"):
             if name.strip():
-                with spin():
+                with st.spinner():
                     db.create_category(user_id, name.strip(), description.strip(), is_productive)
                 st.rerun()
             else:
@@ -174,7 +153,7 @@ def _new_sub_category_form(category):
         sub_description = st.text_input("Sub-category description (optional)")
         if st.form_submit_button("Add sub-category", type="primary"):
             if sub_name.strip():
-                with spin():
+                with st.spinner():
                     db.create_sub_category(category["id"], sub_name.strip(), sub_description.strip())
                 st.rerun()
             else:
@@ -260,7 +239,7 @@ def today_page(user_id):
                 if hours <= 0:
                     st.warning("Hours must be greater than 0.", icon="🙈")
                 else:
-                    with spin():
+                    with st.spinner("Saving..."):
                         db.create_log(
                             user_id,
                             selected_category["id"],
@@ -282,7 +261,7 @@ def today_page(user_id):
         with col2:
             end_date = st.date_input("To", value=date.today(), key="history_end")
 
-        with spin():
+        with st.spinner():
             history = db.get_logs_for_range(user_id, start_date, end_date)
         if history:
             rows = [
@@ -313,7 +292,7 @@ def _category_color_map(categories):
 
 
 def insights_page(user_id):
-    with spin("Counting productive minutes..."):
+    with st.spinner("Loading..."):
         all_logs_raw = db.get_all_logs(user_id)
     total_hours_all_time = sum(float(l["hours"]) for l in all_logs_raw)
     total_tokens_all_time = db.get_total_token_count(user_id)
@@ -396,7 +375,7 @@ def insights_page(user_id):
         st.markdown(f"<div style='height:{SPACE_MD}'></div>", unsafe_allow_html=True)
         show_sub = st.checkbox("By sub-category")
 
-    with spin("Sorting hours into neat little piles..."):
+    with st.spinner():
         ranged_logs = db.get_logs_for_range(user_id, start_date, end_date)
 
     if not ranged_logs:
@@ -521,7 +500,7 @@ def redeem_page(user_id):
         with btn_col:
             if token_balance > 0:
                 if st.button("Redeem 1 token \U0001FA99", type="primary", width="stretch"):
-                    with spin("Convincing the tree to grow faster..."):
+                    with st.spinner("Redeeming..."):
                         token = db.get_unredeemed_tokens(user_id)[0]
                         db.redeem_token(user_id, token["id"])
                     st.session_state["tree_grew"] = True
