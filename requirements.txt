@@ -1,5 +1,5 @@
 streamlit
 supabase
-passlib[bcrypt]
+bcrypt
 python-dotenv
 pytest

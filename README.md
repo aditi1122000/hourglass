@@ -31,7 +31,7 @@ every bit of logic is plain, deterministic Python.
 ## Project layout
 
 - `app.py` -- Streamlit UI / entrypoint
-- `auth.py` -- password hashing (passlib/bcrypt)
+- `auth.py` -- password hashing (`bcrypt` directly)
 - `db.py` -- all Supabase reads/writes, isolated from the rest of the app
 - `rewards.py` -- pure business logic (threshold %, token award decision,
   tree stage from redemption count) -- no DB dependency, fully unit-testable
