@@ -1,15 +1,19 @@
 import os
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from insights import (
     aggregate_hours,
     fold_to_top_groups,
+    group_totals,
+    category_share_takeaway,
     daily_productive_series,
     build_daily_threshold_flags,
     current_streak,
+    streak_flame,
+    build_calendar_heatmap_rows,
     OTHER_LABEL,
 )
 
@@ -144,3 +148,100 @@ def test_current_streak_counts_only_trailing_run():
 def test_current_streak_single_day():
     assert current_streak([True]) == 1
     assert current_streak([False]) == 0
+
+
+def test_group_totals_sums_across_dates():
+    rows = [
+        {"log_date": D1, "category": "Work", "hours": 2},
+        {"log_date": D2, "category": "Work", "hours": 3},
+        {"log_date": D1, "category": "Fun", "hours": 1},
+    ]
+    assert group_totals(rows, "category") == {"Work": 5, "Fun": 1}
+
+
+def test_group_totals_empty():
+    assert group_totals([], "category") == {}
+
+
+def test_category_share_takeaway_names_top_group_and_share():
+    rows = [
+        {"log_date": D1, "category": "Work", "hours": 6},
+        {"log_date": D1, "category": "Fun", "hours": 4},
+    ]
+    takeaway = category_share_takeaway(rows, "category")
+    assert takeaway == "Work took up 60% of your logged time in this range."
+
+
+def test_category_share_takeaway_empty_returns_none():
+    assert category_share_takeaway([], "category") is None
+
+
+def test_category_share_takeaway_zero_hours_returns_none():
+    rows = [{"log_date": D1, "category": "Work", "hours": 0}]
+    assert category_share_takeaway(rows, "category") is None
+
+
+def test_streak_flame_dormant_at_zero():
+    assert streak_flame(0) == "\U0001F4A4"
+
+
+def test_streak_flame_spark_below_three():
+    assert streak_flame(1) == "✨"
+    assert streak_flame(2) == "✨"
+
+
+def test_streak_flame_single_flame_at_three():
+    assert streak_flame(3) == "\U0001F525"
+    assert streak_flame(6) == "\U0001F525"
+
+
+def test_streak_flame_double_flame_at_seven():
+    assert streak_flame(7) == "\U0001F525\U0001F525"
+    assert streak_flame(13) == "\U0001F525\U0001F525"
+
+
+def test_streak_flame_triple_flame_at_fourteen():
+    assert streak_flame(14) == "\U0001F525\U0001F525\U0001F525"
+    assert streak_flame(100) == "\U0001F525\U0001F525\U0001F525"
+
+
+def test_build_calendar_heatmap_rows_covers_every_day_inclusive():
+    rows = build_calendar_heatmap_rows([], D1, D3)
+    assert [r["date"] for r in rows] == [D1, D2, D3]
+
+
+def test_build_calendar_heatmap_rows_no_data_when_no_logs():
+    rows = build_calendar_heatmap_rows([], D1, D1)
+    assert rows[0]["status"] == "no_data"
+    assert rows[0]["pct"] is None
+
+
+def test_build_calendar_heatmap_rows_met_and_missed():
+    daily_rows = [{"log_date": D1, "pct": 0.5}, {"log_date": D2, "pct": 0.1}]
+    rows = build_calendar_heatmap_rows(daily_rows, D1, D2)
+    assert rows[0]["status"] == "met"
+    assert rows[1]["status"] == "missed"
+
+
+def test_build_calendar_heatmap_rows_exact_threshold_counts_as_met():
+    daily_rows = [{"log_date": D1, "pct": 0.35}]
+    rows = build_calendar_heatmap_rows(daily_rows, D1, D1, threshold=0.35)
+    assert rows[0]["status"] == "met"
+
+
+def test_build_calendar_heatmap_rows_week_start_is_preceding_sunday():
+    # Walk every weekday once and confirm week_start always lands on Sunday
+    # and is within 6 days before (or equal to) the day itself.
+    monday = date(2026, 1, 5)  # a known Monday
+    for offset in range(7):
+        day = monday + timedelta(days=offset)
+        rows = build_calendar_heatmap_rows([], day, day)
+        week_start = rows[0]["week_start"]
+        assert week_start.weekday() == 6  # Sunday
+        assert 0 <= (day - week_start).days <= 6
+
+
+def test_build_calendar_heatmap_rows_weekday_label_matches_python_weekday():
+    monday = date(2026, 1, 5)
+    rows = build_calendar_heatmap_rows([], monday, monday)
+    assert rows[0]["weekday_label"] == "Mon"

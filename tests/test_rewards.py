@@ -9,6 +9,9 @@ from rewards import (
     should_award_token,
     tree_stage_from_redemptions,
     tree_emoji_from_redemptions,
+    forest_history,
+    redemptions_until_full_tree,
+    FOREST_CYCLE,
 )
 
 
@@ -91,3 +94,64 @@ def test_tree_emoji_matches_stage_count():
 def test_tree_emoji_from_redemptions_smoke():
     assert tree_emoji_from_redemptions(0) == "\U0001F330"
     assert tree_emoji_from_redemptions(4) == "\U0001F338"
+
+
+def test_forest_cycle_matches_stage_count():
+    assert FOREST_CYCLE == 4
+
+
+def test_forest_history_fresh_start():
+    past, stage, emoji = forest_history(0)
+    assert past == []
+    assert stage == "seed"
+    assert emoji == "\U0001F330"
+
+
+def test_forest_history_mid_first_tree():
+    past, stage, emoji = forest_history(3)
+    assert past == []
+    assert stage == "tree"
+    assert emoji == "\U0001F333"
+
+
+def test_forest_history_one_tree_completed_starts_new_seed():
+    past, stage, emoji = forest_history(4)
+    assert past == ["\U0001F338"]
+    assert stage == "seed"
+    assert emoji == "\U0001F330"
+
+
+def test_forest_history_second_tree_in_progress():
+    past, stage, emoji = forest_history(5)
+    assert past == ["\U0001F338"]
+    assert stage == "sprout"
+
+
+def test_forest_history_two_trees_completed():
+    past, stage, emoji = forest_history(8)
+    assert past == ["\U0001F338", "\U0001F338"]
+    assert stage == "seed"
+
+
+def test_forest_history_negative_treated_as_zero():
+    past, stage, emoji = forest_history(-5)
+    assert past == []
+    assert stage == "seed"
+
+
+def test_redemptions_until_full_tree_fresh_start():
+    assert redemptions_until_full_tree(0) == 4
+
+
+def test_redemptions_until_full_tree_partway():
+    assert redemptions_until_full_tree(1) == 3
+    assert redemptions_until_full_tree(3) == 1
+
+
+def test_redemptions_until_full_tree_resets_after_completion():
+    assert redemptions_until_full_tree(4) == 4
+    assert redemptions_until_full_tree(8) == 4
+
+
+def test_redemptions_until_full_tree_negative_treated_as_zero():
+    assert redemptions_until_full_tree(-10) == 4

@@ -76,6 +76,21 @@ def inject_css():
             font-size: 1.5rem;
             font-weight: 700;
         }}
+        .stat-card.stat-card-hero {{
+            border-left-color: {BRAND_ACCENT};
+        }}
+        .stat-card.stat-card-hero .stat-value {{
+            font-size: 2.1rem;
+        }}
+        .takeaway-line {{
+            font-size: 1.02rem;
+            margin: 0.25rem 0 0.75rem 0;
+        }}
+        .forest-row {{
+            font-size: 2.2rem;
+            line-height: 1.5;
+            letter-spacing: 0.1rem;
+        }}
         div[data-testid="stButton"] button[kind="primary"],
         div[data-testid="stFormSubmitButton"] button[kind="primary"] {{
             background-color: {BRAND_INDIGO};
@@ -99,11 +114,12 @@ def inject_css():
     )
 
 
-def stat_card(col, label, value, icon=""):
+def stat_card(col, label, value, icon="", hero=False):
     with col:
+        css_class = "stat-card stat-card-hero" if hero else "stat-card"
         st.markdown(
             f"""
-            <div class="stat-card">
+            <div class="{css_class}">
                 <div class="stat-label">{icon} {label}</div>
                 <div class="stat-value">{value}</div>
             </div>
@@ -207,6 +223,15 @@ def logging_page(user_id):
         st.balloons()
         st.success(random.choice(CELEBRATION_MESSAGES), icon="\U0001FA99")
 
+    token_balance = db.get_unredeemed_token_count(user_id)
+    if token_balance > 0:
+        plural = "s" if token_balance != 1 else ""
+        st.info(
+            f"🎁 You have {token_balance} token{plural} waiting -- "
+            f"pop over to the **Redeem** tab to grow your tree!",
+            icon="🎁",
+        )
+
     categories = db.get_categories(user_id)
 
     if not categories:
@@ -268,7 +293,6 @@ def logging_page(user_id):
         for l in today_logs
     ]
     total_hours, productive_hours, pct = rewards.compute_productivity(today_pure)
-    token_balance = db.get_unredeemed_token_count(user_id)
 
     with st.container(border=True):
         pcol, mcol = st.columns([3, 1])
@@ -324,8 +348,7 @@ def insights_page(user_id):
     total_hours_all_time = sum(float(l["hours"]) for l in all_logs_raw)
     total_tokens_all_time = db.get_total_token_count(user_id)
     redemption_count = db.get_redemption_count(user_id)
-    tree_stage = rewards.tree_stage_from_redemptions(redemption_count)
-    tree_emoji = rewards.tree_emoji_from_redemptions(redemption_count)
+    past_trees, _current_stage, _current_emoji = rewards.forest_history(redemption_count)
 
     daily_pure = [
         {
@@ -345,10 +368,49 @@ def insights_page(user_id):
 
     inject_css()
     c1, c2, c3, c4 = st.columns(4)
-    stat_card(c1, "Total hours logged", f"{total_hours_all_time:.1f}h", "⏳")
-    stat_card(c2, "Tokens earned", total_tokens_all_time, "🎟️")
-    stat_card(c3, f"Tree: {tree_stage}", tree_emoji, "🌳")
-    stat_card(c4, "Day streak (35%+)", streak, "🔥")
+    stat_card(c1, "Day streak", f"{streak}d {insights.streak_flame(streak)}", "", hero=True)
+    stat_card(c2, "Total hours logged", f"{total_hours_all_time:.1f}h", "⏳")
+    stat_card(c3, "Tokens earned", total_tokens_all_time, "🎟️")
+    stat_card(c4, "Trees grown", len(past_trees), "🌲")
+
+    st.write("")
+    heatmap_end = date.today()
+    raw_start = heatmap_end - timedelta(days=83)  # ~12 weeks, GitHub-style window
+    heatmap_start = raw_start - timedelta(days=(raw_start.weekday() + 1) % 7)  # snap back to a Sunday
+    heatmap_rows = insights.build_calendar_heatmap_rows(daily_rows, heatmap_start, heatmap_end)
+    heatmap_data = [
+        {
+            "date": str(r["date"]),
+            "week_start": str(r["week_start"]),
+            "weekday_label": r["weekday_label"],
+            "status": r["status"],
+            "pct_label": f"{r['pct'] * 100:.0f}%" if r["pct"] is not None else "No data",
+        }
+        for r in heatmap_rows
+    ]
+    status_colors = {"met": "#1baf7a", "missed": "#e8d4d0", "no_data": "#e9e9e6"}
+    heatmap_chart = (
+        alt.Chart(alt.Data(values=heatmap_data))
+        .mark_rect(cornerRadius=2, stroke="white", strokeWidth=2)
+        .encode(
+            x=alt.X("week_start:O", title=None, axis=alt.Axis(labelAngle=-45, labelFontSize=9)),
+            y=alt.Y("weekday_label:N", title=None, sort=insights.CALENDAR_WEEKDAY_ORDER),
+            color=alt.Color(
+                "status:N",
+                title=None,
+                scale=alt.Scale(
+                    domain=["met", "missed", "no_data"],
+                    range=[status_colors["met"], status_colors["missed"], status_colors["no_data"]],
+                ),
+                legend=alt.Legend(
+                    labelExpr="datum.label == 'met' ? '35%+' : datum.label == 'missed' ? '< 35%' : 'No data'"
+                ),
+            ),
+            tooltip=["date:O", "pct_label:N"],
+        )
+        .properties(height=160, title="Your last ~12 weeks at a glance")
+    )
+    st.altair_chart(heatmap_chart, width="stretch")
 
     st.write("")
     col1, col2, col3 = st.columns([2, 2, 2])
@@ -375,11 +437,11 @@ def insights_page(user_id):
             return f"{l['categories']['name']} / {l['sub_categories']['name']}"
         return l["categories"]["name"] if l.get("categories") else "Unknown"
 
-    bar_rows = [
+    raw_bar_rows = [
         {"log_date": l["log_date"], "group": group_label(l), "hours": float(l["hours"])}
         for l in ranged_logs
     ]
-    bar_rows = insights.fold_to_top_groups(bar_rows, "group")
+    bar_rows = insights.fold_to_top_groups(raw_bar_rows, "group")
 
     present_groups = {r["group"] for r in bar_rows}
     ordered_names = [name for name in color_map if name in present_groups]
@@ -394,7 +456,27 @@ def insights_page(user_id):
             domain.append(group)
             range_.append(BRAND_GRAY if group == insights.OTHER_LABEL else CATEGORY_PALETTE[len(domain) % len(CATEGORY_PALETTE)])
 
-    bar_title = "Hours by category" + (" / sub-category" if show_sub else "")
+    takeaway = insights.category_share_takeaway(raw_bar_rows, "group")
+    if takeaway:
+        st.markdown(f"<p class='takeaway-line'>💡 {takeaway}</p>", unsafe_allow_html=True)
+
+    totals = insights.group_totals(raw_bar_rows, "group")
+    ranked = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)
+    rank_data = [{"group": name, "hours": hours} for name, hours in ranked]
+    rank_chart = (
+        alt.Chart(alt.Data(values=rank_data))
+        .mark_bar(cornerRadius=3)
+        .encode(
+            x=alt.X("hours:Q", title="Hours"),
+            y=alt.Y("group:N", title=None, sort="-x"),
+            color=alt.Color("group:N", legend=None, scale=alt.Scale(domain=domain, range=range_)),
+            tooltip=["group:N", "hours:Q"],
+        )
+        .properties(height=max(36 * len(rank_data), 90), title="Total hours (ranked)")
+    )
+    st.altair_chart(rank_chart, width="stretch")
+
+    bar_title = "Hours by category" + (" / sub-category" if show_sub else "") + " over time"
     bar_chart = (
         alt.Chart(alt.Data(values=bar_rows))
         .mark_bar(cornerRadius=2)
@@ -436,10 +518,13 @@ def insights_page(user_id):
 
 
 def redeem_page(user_id):
+    if st.session_state.pop("tree_grew", False):
+        st.toast("Your tree grew a little! \U0001F331", icon="\U0001F331")
+
     token_balance = db.get_unredeemed_token_count(user_id)
     redemption_count = db.get_redemption_count(user_id)
-    stage = rewards.tree_stage_from_redemptions(redemption_count)
-    emoji = rewards.tree_emoji_from_redemptions(redemption_count)
+    past_trees, stage, emoji = rewards.forest_history(redemption_count)
+    remaining = rewards.redemptions_until_full_tree(redemption_count)
 
     with st.container(border=True):
         st.markdown(
@@ -447,8 +532,14 @@ def redeem_page(user_id):
             unsafe_allow_html=True,
         )
         st.markdown(
-            f"<p style='text-align:center;font-size:1.1rem;margin-bottom:1rem'>"
-            f"Stage: <b style='color:{BRAND_INDIGO}'>{stage}</b></p>",
+            f"<p style='text-align:center;font-size:1.1rem;margin-bottom:0.25rem'>"
+            f"Growing: <b style='color:{BRAND_INDIGO}'>{stage}</b></p>",
+            unsafe_allow_html=True,
+        )
+        plural = "s" if remaining != 1 else ""
+        st.markdown(
+            f"<p style='text-align:center;opacity:0.7;margin-bottom:1rem'>"
+            f"{remaining} more redemption{plural} until this tree is fully grown \U0001F333</p>",
             unsafe_allow_html=True,
         )
 
@@ -459,6 +550,7 @@ def redeem_page(user_id):
                     with spin("Convincing the tree to grow faster..."):
                         token = db.get_unredeemed_tokens(user_id)[0]
                         db.redeem_token(user_id, token["id"])
+                    st.session_state["tree_grew"] = True
                     st.rerun()
             else:
                 st.caption(
@@ -472,6 +564,17 @@ def redeem_page(user_id):
             f"🎟️ {token_balance} unredeemed token{plural}</p>",
             unsafe_allow_html=True,
         )
+
+    st.write("")
+    if past_trees:
+        st.markdown("<p style='opacity:0.7;margin-bottom:0.25rem'>Your forest so far</p>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='forest-row'>{''.join(past_trees)}</div>",
+            unsafe_allow_html=True,
+        )
+        st.caption(f"{len(past_trees)} tree{'s' if len(past_trees) != 1 else ''} fully grown and planted.")
+    else:
+        st.caption("Grow your first full tree to start your forest \U0001F333")
 
 
 def main():

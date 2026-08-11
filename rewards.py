@@ -56,3 +56,32 @@ def tree_stage_from_redemptions(redemption_count):
 
 def tree_emoji_from_redemptions(redemption_count):
     return TREE_EMOJI[tree_stage_from_redemptions(redemption_count)]
+
+
+# Redemptions needed to grow one tree from seed to blooming tree.
+FOREST_CYCLE = len(TREE_STAGES) - 1
+
+
+def forest_history(redemption_count):
+    """Forest-app style view of redemption history: once a tree finishes
+    growing (FOREST_CYCLE redemptions) it's "planted" into the forest and a
+    new one starts from a seed, rather than the single tree capping out
+    forever.
+
+    Returns (past_tree_emoji, current_stage, current_emoji).
+    """
+    if redemption_count < 0:
+        redemption_count = 0
+    full_trees = redemption_count // FOREST_CYCLE
+    remainder = redemption_count % FOREST_CYCLE
+    current_stage = TREE_STAGES[remainder]
+    past_tree_emoji = [TREE_EMOJI[TREE_STAGES[-1]]] * full_trees
+    return past_tree_emoji, current_stage, TREE_EMOJI[current_stage]
+
+
+def redemptions_until_full_tree(redemption_count):
+    """How many more redemptions until the currently-growing tree blooms."""
+    if redemption_count < 0:
+        redemption_count = 0
+    remainder = redemption_count % FOREST_CYCLE
+    return FOREST_CYCLE - remainder if remainder else FOREST_CYCLE

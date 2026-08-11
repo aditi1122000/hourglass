@@ -11,6 +11,10 @@ from rewards import PRODUCTIVITY_THRESHOLD
 OTHER_LABEL = "Other"
 MAX_CHART_GROUPS = 8
 
+# Sunday-first order, matching GitHub's contribution graph convention.
+WEEKDAY_LABELS_MON_FIRST = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+CALENDAR_WEEKDAY_ORDER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
 
 def aggregate_hours(rows, group_field):
     """rows: list of {"log_date": ..., group_field: ..., "hours": number}.
@@ -31,6 +35,31 @@ def aggregate_hours(rows, group_field):
     return result
 
 
+def group_totals(rows, group_field):
+    """rows: list of {group_field: ..., "hours": number}.
+
+    Returns {group_name: total_hours} across all rows, regardless of date.
+    """
+    totals = {}
+    for row in rows:
+        totals[row[group_field]] = totals.get(row[group_field], 0) + row["hours"]
+    return totals
+
+
+def category_share_takeaway(rows, group_field):
+    """A one-line, plain-Python takeaway about the biggest group's share of
+    total hours, e.g. "Work took up 62% of your logged time in this range."
+    Returns None when there's nothing to summarize.
+    """
+    totals = group_totals(rows, group_field)
+    total_hours = sum(totals.values())
+    if total_hours <= 0:
+        return None
+    top_group, top_hours = max(totals.items(), key=lambda kv: kv[1])
+    share_pct = top_hours / total_hours * 100
+    return f"{top_group} took up {share_pct:.0f}% of your logged time in this range."
+
+
 def fold_to_top_groups(rows, group_field, max_groups=MAX_CHART_GROUPS, other_label=OTHER_LABEL):
     """Cap the number of distinct groups a chart has to render.
 
@@ -38,9 +67,7 @@ def fold_to_top_groups(rows, group_field, max_groups=MAX_CHART_GROUPS, other_lab
     relabeled to `other_label` and re-summed, so a chart never has to render
     an unbounded number of series.
     """
-    totals = {}
-    for row in rows:
-        totals[row[group_field]] = totals.get(row[group_field], 0) + row["hours"]
+    totals = group_totals(rows, group_field)
 
     if len(totals) <= max_groups:
         return aggregate_hours(rows, group_field)
@@ -103,3 +130,51 @@ def current_streak(day_flags):
             break
         streak += 1
     return streak
+
+
+def streak_flame(streak):
+    """Map a day-streak length to a Duolingo-style flame intensity emoji --
+    escalating visual weight rewards a longer streak instead of just showing
+    a bare number."""
+    if streak >= 14:
+        return "\U0001F525\U0001F525\U0001F525"
+    if streak >= 7:
+        return "\U0001F525\U0001F525"
+    if streak >= 3:
+        return "\U0001F525"
+    if streak >= 1:
+        return "✨"
+    return "\U0001F4A4"
+
+
+def build_calendar_heatmap_rows(daily_rows, start_date, end_date, threshold=PRODUCTIVITY_THRESHOLD):
+    """One row per calendar day in [start_date, end_date], shaped for a
+    GitHub-style contribution heatmap: which Sunday-starting week it falls
+    in, its weekday abbreviation, and whether that day met/missed the
+    productivity threshold (or has no logged data at all).
+    """
+    pct_by_date = {row["log_date"]: row["pct"] for row in daily_rows}
+    rows = []
+    current = start_date
+    while current <= end_date:
+        weekday_index = current.weekday()  # Mon=0 .. Sun=6
+        days_since_sunday = (weekday_index + 1) % 7
+        week_start = current - timedelta(days=days_since_sunday)
+        pct = pct_by_date.get(current)
+        if pct is None:
+            status = "no_data"
+        elif pct >= threshold:
+            status = "met"
+        else:
+            status = "missed"
+        rows.append(
+            {
+                "date": current,
+                "week_start": week_start,
+                "weekday_label": WEEKDAY_LABELS_MON_FIRST[weekday_index],
+                "pct": pct,
+                "status": status,
+            }
+        )
+        current += timedelta(days=1)
+    return rows
