@@ -20,7 +20,13 @@ every bit of logic is plain, deterministic Python.
   logged hours, you earn exactly one token for that day (never more than one
   per user per day, even if you keep logging).
 - **Redeem**: spend a token to grow your tree one stage: seed -> sprout ->
-  sapling -> tree -> blooming tree.
+  sapling -> tree -> blooming tree. Earning a token mid-session pops
+  balloons and a fun celebration message.
+- **Insights**: a page of built-in Streamlit/Altair charts over your own
+  data -- hours by category (or sub-category) as a stacked bar chart, daily
+  productive % as a line chart with the 35% threshold marked, and stat tiles
+  for total hours logged, tokens earned, tree stage, and your current streak
+  of days clearing the threshold.
 
 ## Project layout
 
@@ -29,9 +35,12 @@ every bit of logic is plain, deterministic Python.
 - `db.py` -- all Supabase reads/writes, isolated from the rest of the app
 - `rewards.py` -- pure business logic (threshold %, token award decision,
   tree stage from redemption count) -- no DB dependency, fully unit-testable
+- `insights.py` -- pure data-shaping for the Insights page (category/date
+  aggregation, folding low-volume categories into "Other", daily productive
+  % series, streak calculation) -- same DB-free, unit-testable pattern
 - `schema.sql` -- table definitions for Supabase Postgres
 - `assets/logo.svg` -- hand-authored logo
-- `tests/test_rewards.py` -- unit tests for `rewards.py`
+- `tests/test_rewards.py`, `tests/test_insights.py` -- unit tests
 
 ## Run it locally
 
@@ -72,8 +81,9 @@ project's credentials.
 pytest
 ```
 
-`tests/test_rewards.py` covers the pure logic in `rewards.py` only, so it
-runs without any Supabase connection or credentials.
+`tests/test_rewards.py` and `tests/test_insights.py` cover the pure logic in
+`rewards.py` and `insights.py` only, so they run without any Supabase
+connection or credentials.
 
 ## Deploy on Streamlit Community Cloud
 

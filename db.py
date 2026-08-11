@@ -146,6 +146,18 @@ def get_logs_for_range(user_id, start_date, end_date):
     return res.data or []
 
 
+def get_all_logs(user_id):
+    res = (
+        get_client()
+        .table("logs")
+        .select("*, categories(name, is_productive), sub_categories(name)")
+        .eq("user_id", user_id)
+        .order("log_date")
+        .execute()
+    )
+    return res.data or []
+
+
 # ---- tokens -------------------------------------------------------------------
 
 def get_token_for_date(user_id, log_date):
@@ -184,6 +196,17 @@ def get_unredeemed_tokens(user_id):
 
 def get_unredeemed_token_count(user_id):
     return len(get_unredeemed_tokens(user_id))
+
+
+def get_total_token_count(user_id):
+    res = (
+        get_client()
+        .table("tokens")
+        .select("id", count="exact")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    return res.count or 0
 
 
 # ---- redemptions ---------------------------------------------------------------
