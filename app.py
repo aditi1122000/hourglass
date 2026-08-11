@@ -58,11 +58,6 @@ def inject_css():
             font-size: 1.02rem;
             margin: 0.25rem 0 0.75rem 0;
         }}
-        .forest-row {{
-            font-size: 2.2rem;
-            line-height: 1.5;
-            letter-spacing: 0.1rem;
-        }}
         .stTabs [data-baseweb="tab-list"] {{
             gap: {SPACE_MD};
         }}
@@ -147,26 +142,182 @@ def inject_css():
             padding: 1.75rem 1.75rem 1.25rem 1.75rem;
         }}
 
-        /* Glowing radial backdrop behind the Redeem tree hero. */
+        /* Login hero stage: a bold gradient landing moment (matching
+        hero_band's language) instead of a bare logo floating on white --
+        this is the very first thing anyone sees, so it carries the same
+        visual weight as Today's hero band. */
+        .st-key-login_hero {{
+            background: linear-gradient(135deg, {BRAND_INDIGO} 0%, #4B3F8C 50%, {BRAND_ACCENT} 100%);
+            border-radius: 28px;
+            padding: 2.25rem 1.5rem 2.5rem 1.5rem;
+            text-align: center;
+            box-shadow: 0 24px 50px -18px {BRAND_INDIGO}80;
+            margin-bottom: 1.25rem;
+        }}
+        .login-badge-circle {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 108px;
+            height: 108px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            box-shadow: 0 14px 30px -10px rgba(0,0,0,0.35);
+            margin-bottom: 0.75rem;
+        }}
+        .login-hero-title {{
+            color: #FFFFFF !important;
+            font-size: 2.6rem !important;
+            margin: 0.25rem 0 0.5rem 0 !important;
+        }}
+        .login-hero-tagline {{
+            color: rgba(255,255,255,0.9) !important;
+            font-size: 1.05rem;
+            margin: 0;
+        }}
+
+        /* Redeem stage: the tree is the emotional payoff of the whole app,
+        so it gets its own dedicated backdrop -- not just a bordered box --
+        the same way the login hero and Today's metrics got a stronger
+        treatment than a flat card. */
+        .st-key-redeem_stage {{
+            background: radial-gradient(circle at top, {BRAND_AMBER}33 0%, #FFFFFF 55%),
+                linear-gradient(180deg, #FFFDF7 0%, #FFFFFF 100%);
+            border-radius: 28px;
+            padding: 2rem 1.5rem 1.75rem 1.5rem;
+            box-shadow: 0 22px 48px -20px {BRAND_INDIGO}59;
+        }}
+
+        /* Glowing radial backdrop + soil "ground" behind the Redeem tree
+        hero, sized up so the tree reads as the centerpiece of the page. */
         .tree-hero-glow {{
             position: relative;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-end;
+            height: 250px;
         }}
         .tree-hero-glow::before {{
             content: "";
             position: absolute;
-            width: 230px;
-            height: 230px;
+            top: 0;
+            width: 280px;
+            height: 280px;
             border-radius: 50%;
             background: radial-gradient(circle, {BRAND_AMBER}80 0%, {BRAND_AMBER}00 72%);
         }}
+        .redeem-ground {{
+            position: absolute;
+            bottom: 8px;
+            width: 190px;
+            height: 32px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse, {BRAND_INDIGO}38 0%, transparent 75%);
+            z-index: 0;
+        }}
         .tree-hero-glow .tree-emoji {{
             position: relative;
-            font-size: 150px;
-            line-height: 1.1;
-            filter: drop-shadow(0 16px 22px {BRAND_INDIGO}59);
+            z-index: 1;
+            font-size: 190px;
+            line-height: 1;
+            filter: drop-shadow(0 18px 24px {BRAND_INDIGO}59);
+        }}
+
+        /* Graphic growth stepper: seed -> sprout -> sapling -> tree ->
+        blooming tree, with the current stage highlighted -- redemption
+        progress made visible, not just a sentence of text. */
+        .stage-track {{
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 380px;
+            margin: 0.5rem auto 0 auto;
+        }}
+        .stage-track::before {{
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            right: 10%;
+            height: 4px;
+            background: linear-gradient(90deg, {BRAND_AMBER}, {BRAND_INDIGO});
+            opacity: 0.3;
+            transform: translateY(-50%);
+            border-radius: 4px;
+            z-index: 0;
+        }}
+        .stage-dot {{
+            position: relative;
+            z-index: 1;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            background: #FFFFFF;
+            border: 3px solid #e7e3d8;
+            opacity: 0.45;
+        }}
+        .stage-dot.done {{
+            border-color: {BRAND_INDIGO};
+            opacity: 0.85;
+        }}
+        .stage-dot.current {{
+            border-color: {BRAND_ACCENT};
+            box-shadow: 0 0 0 6px {BRAND_AMBER}40;
+            opacity: 1;
+            transform: scale(1.25);
+            background: linear-gradient(160deg, #FFFFFF 0%, {BRAND_AMBER}33 100%);
+        }}
+
+        /* Forest gallery: each fully-grown tree gets its own shadowed chip
+        instead of a flat row of emoji text. */
+        .forest-grid {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }}
+        .forest-chip {{
+            font-size: 2.3rem;
+            line-height: 1;
+            background: linear-gradient(160deg, #FFFFFF 0%, {BRAND_AMBER}26 100%);
+            border-radius: 16px;
+            padding: 0.5rem 0.7rem;
+            box-shadow: 0 10px 22px -14px {BRAND_INDIGO}66;
+        }}
+
+        /* Shared bold section heading, used wherever a plain chart title
+        needs the same typographic weight Today's hero numbers get. */
+        .section-heading {{
+            font-family: "Fraunces", serif;
+            color: {BRAND_INDIGO};
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin: 0 0 0.75rem 0;
+        }}
+
+        /* Insights stats strip + chart cards: the same gradient/shadow
+        panel language as Today's hero metrics, so Insights doesn't read as
+        a visually weaker sibling page. */
+        .st-key-insights_stats_strip {{
+            background: linear-gradient(160deg, #FFFFFF 0%, {BRAND_AMBER}1f 100%);
+            border-radius: 22px;
+            padding: 1.25rem 1rem 0.5rem 1rem;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 16px 34px -22px {BRAND_INDIGO}55;
+        }}
+        .st-key-heatmap_card,
+        .st-key-rank_chart_card,
+        .st-key-bar_chart_card,
+        .st-key-line_chart_card {{
+            background: linear-gradient(160deg, #FFFFFF 0%, {BRAND_AMBER}14 100%);
+            border-radius: 20px;
+            padding: 1.25rem 1.25rem 0.75rem 1.25rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 14px 32px -22px {BRAND_INDIGO}66;
         }}
         </style>
         """,
@@ -174,28 +325,23 @@ def inject_css():
     )
 
 
-def show_logo(width=60):
+def show_logo(width=60, badge=False):
     with open("assets/logo.svg") as f:
-        svg = f.read()
-    st.markdown(
-        f'<div style="text-align:center">{svg.replace("width=\"100\" height=\"140\"", f"width=\"{width}\"")}</div>',
-        unsafe_allow_html=True,
-    )
+        svg = f.read().replace('width="100" height="140"', f'width="{width}"')
+    inner = f'<div class="login-badge-circle">{svg}</div>' if badge else svg
+    st.markdown(f'<div style="text-align:center">{inner}</div>', unsafe_allow_html=True)
 
 
 def login_screen():
     _, mid, _ = st.columns([1, 2, 1])
     with mid:
-        show_logo(width=72)
-        st.markdown(
-            "<h2 style='text-align:center;margin-bottom:0'>Hourglass ⏳</h2>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            "<p style='text-align:center;opacity:0.7;margin-top:0.25rem'>"
-            "Log hours, cross 35% productive, grow a tree. 🌱</p>",
-            unsafe_allow_html=True,
-        )
+        with st.container(key="login_hero"):
+            show_logo(width=76, badge=True)
+            st.markdown("<h1 class='login-hero-title'>Hourglass ⏳</h1>", unsafe_allow_html=True)
+            st.markdown(
+                "<p class='login-hero-tagline'>Log hours, cross 35% productive, grow a tree. 🌱</p>",
+                unsafe_allow_html=True,
+            )
 
         with st.form("login_form"):
             username = st.text_input("Username")
@@ -421,15 +567,16 @@ def insights_page(user_id):
         streak = 0
 
     inject_css()
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.metric("Day streak", f"{streak}d {insights.streak_flame(streak)}", border=True)
-    with c2:
-        st.metric("Total hours logged", f"{total_hours_all_time:.1f}h", icon="⏳", border=True)
-    with c3:
-        st.metric("Tokens earned", total_tokens_all_time, icon="🎟️", border=True)
-    with c4:
-        st.metric("Trees grown", len(past_trees), icon="🌲", border=True)
+    with st.container(key="insights_stats_strip"):
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.metric("Day streak", f"{streak}d {insights.streak_flame(streak)}", border=True)
+        with c2:
+            st.metric("Total hours logged", f"{total_hours_all_time:.1f}h", icon="⏳", border=True)
+        with c3:
+            st.metric("Tokens earned", total_tokens_all_time, icon="🎟️", border=True)
+        with c4:
+            st.metric("Trees grown", len(past_trees), icon="🌲", border=True)
 
     st.write("")
     heatmap_end = date.today()
@@ -466,9 +613,11 @@ def insights_page(user_id):
             ),
             tooltip=["date:O", "pct_label:N"],
         )
-        .properties(height=160, title="Your last ~12 weeks at a glance")
+        .properties(height=160)
     )
-    st.altair_chart(heatmap_chart, width="stretch")
+    with st.container(key="heatmap_card"):
+        st.markdown("<p class='section-heading'>Your last ~12 weeks at a glance</p>", unsafe_allow_html=True)
+        st.altair_chart(heatmap_chart, width="stretch")
 
     st.write("")
     col1, col2, col3 = st.columns([2, 2, 2])
@@ -530,9 +679,11 @@ def insights_page(user_id):
             color=alt.Color("group:N", legend=None, scale=alt.Scale(domain=domain, range=range_)),
             tooltip=["group:N", "hours:Q"],
         )
-        .properties(height=max(36 * len(rank_data), 90), title="Total hours (ranked)")
+        .properties(height=max(36 * len(rank_data), 90))
     )
-    st.altair_chart(rank_chart, width="stretch")
+    with st.container(key="rank_chart_card"):
+        st.markdown("<p class='section-heading'>Total hours (ranked)</p>", unsafe_allow_html=True)
+        st.altair_chart(rank_chart, width="stretch")
 
     bar_title = "Hours by category" + (" / sub-category" if show_sub else "") + " over time"
     bar_chart = (
@@ -544,9 +695,11 @@ def insights_page(user_id):
             color=alt.Color("group:N", title="Category", scale=alt.Scale(domain=domain, range=range_)),
             tooltip=["log_date:T", "group:N", "hours:Q"],
         )
-        .properties(height=280, title=bar_title)
+        .properties(height=280)
     )
-    st.altair_chart(bar_chart, width="stretch")
+    with st.container(key="bar_chart_card"):
+        st.markdown(f"<p class='section-heading'>{bar_title}</p>", unsafe_allow_html=True)
+        st.altair_chart(bar_chart, width="stretch")
 
     pct_rows = [
         {"log_date": str(r["log_date"]), "pct": r["pct"] * 100}
@@ -568,11 +721,13 @@ def insights_page(user_id):
         .mark_rule(color=BRAND_ACCENT, strokeDash=[6, 4], strokeWidth=2)
         .encode(y="threshold:Q")
     )
-    st.altair_chart(
-        (line + threshold_rule).properties(height=280, title="Daily productive %"),
-        width="stretch",
-    )
-    st.caption(f"Dashed line marks the {threshold_pct:.0f}% productive threshold that earns a token.")
+    with st.container(key="line_chart_card"):
+        st.markdown("<p class='section-heading'>Daily productive %</p>", unsafe_allow_html=True)
+        st.altair_chart(
+            (line + threshold_rule).properties(height=280),
+            width="stretch",
+        )
+        st.caption(f"Dashed line marks the {threshold_pct:.0f}% productive threshold that earns a token.")
 
 
 def redeem_page(user_id):
@@ -583,14 +738,31 @@ def redeem_page(user_id):
     redemption_count = db.get_redemption_count(user_id)
     past_trees, stage, emoji = rewards.forest_history(redemption_count)
     remaining = rewards.redemptions_until_full_tree(redemption_count)
+    stage_index = rewards.TREE_STAGES.index(stage)
 
-    with st.container(border=True):
+    # Graphic stepper across every named growth stage -- this is the
+    # redemption-progress payoff made visible at a glance, not just a line
+    # of text saying how many redemptions are left.
+    stage_dots = []
+    for i, stage_name in enumerate(rewards.TREE_STAGES):
+        if i < stage_index:
+            dot_class = "done"
+        elif i == stage_index:
+            dot_class = "current"
+        else:
+            dot_class = ""
+        stage_dots.append(f"<div class='stage-dot {dot_class}'>{rewards.TREE_EMOJI[stage_name]}</div>")
+    stage_track_html = f"<div class='stage-track'>{''.join(stage_dots)}</div>"
+
+    with st.container(key="redeem_stage"):
         st.markdown(
-            f"<div class='tree-hero-glow'><span class='tree-emoji'>{emoji}</span></div>",
+            f"<div class='tree-hero-glow'><div class='redeem-ground'></div>"
+            f"<span class='tree-emoji'>{emoji}</span></div>",
             unsafe_allow_html=True,
         )
+        st.markdown(stage_track_html, unsafe_allow_html=True)
         st.markdown(
-            f"<p style='text-align:center;font-size:1.1rem;margin-bottom:0.25rem'>"
+            f"<p style='text-align:center;font-size:1.2rem;margin:1rem 0 0.25rem 0'>"
             f"Growing: <b style='color:{BRAND_INDIGO}'>{stage}</b></p>",
             unsafe_allow_html=True,
         )
@@ -625,11 +797,9 @@ def redeem_page(user_id):
 
     st.write("")
     if past_trees:
-        st.markdown("<p style='opacity:0.7;margin-bottom:0.25rem'>Your forest so far</p>", unsafe_allow_html=True)
-        st.markdown(
-            f"<div class='forest-row'>{''.join(past_trees)}</div>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<p class='section-heading'>Your forest so far</p>", unsafe_allow_html=True)
+        forest_chips = "".join(f"<div class='forest-chip'>{t}</div>" for t in past_trees)
+        st.markdown(f"<div class='forest-grid'>{forest_chips}</div>", unsafe_allow_html=True)
         st.caption(f"{len(past_trees)} tree{'s' if len(past_trees) != 1 else ''} fully grown and planted.")
     else:
         st.caption("Grow your first full tree to start your forest \U0001F333")
