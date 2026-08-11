@@ -10,7 +10,15 @@ backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#FDF7EA"
 textColor = "#2E2A5C"
 borderColor = "#FAE6C1"
-font = "sans serif"
+# Distinctive display/body pairing (native Streamlit font theming, not a CSS
+# hack): Fraunces is a warm, high-contrast serif for headings -- it echoes
+# the "grow a tree" premise far more than a generic sans -- paired with
+# Inter, a clean workhorse sans for body/widget text.
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+headingFont = "Fraunces:https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&display=swap"
+headingFontWeights = [700, 700, 600, 600, 600, 600]
+baseFontWeight = 400
+metricValueFontWeight = 800
 baseRadius = "medium"
 buttonRadius = "medium"
 showWidgetBorder = true

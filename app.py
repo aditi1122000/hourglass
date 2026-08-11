@@ -46,9 +46,11 @@ CELEBRATION_MESSAGES = [
 
 
 def inject_css():
-    # Colors, button styling, and the active-tab indicator now all come from
-    # .streamlit/config.toml's [theme] block. Only layout the theme can't
-    # express -- text sizing/spacing for two custom markup rows -- stays here.
+    # Fonts, brand colors, and base widget styling come from
+    # .streamlit/config.toml's [theme] block. What stays here is everything
+    # that theme can't express: gradients, shadows, and accent blocks that
+    # give the flat bordered-box look real depth, plus a couple of small
+    # custom markup rows.
     st.markdown(
         f"""
         <style>
@@ -63,6 +65,108 @@ def inject_css():
         }}
         .stTabs [data-baseweb="tab-list"] {{
             gap: {SPACE_MD};
+        }}
+
+        /* Subtle top-of-page wash instead of flat white everywhere. */
+        .stApp {{
+            background: linear-gradient(180deg, {BRAND_AMBER}14 0%, #FFFFFF 420px);
+        }}
+
+        /* Gradient hero band behind the app header (scoped via
+        st.container(key="hero_band") so it never leaks onto other rows). */
+        .st-key-hero_band {{
+            background: linear-gradient(135deg, {BRAND_INDIGO} 0%, #4B3F8C 55%, #6C4AA6 100%);
+            border-radius: 24px;
+            padding: 1.5rem 1.75rem 1.25rem 1.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 16px 36px -16px {BRAND_INDIGO}73;
+        }}
+        .st-key-hero_band h2 {{
+            color: #FFFFFF !important;
+            margin-bottom: 0 !important;
+        }}
+        .st-key-hero_band .hero-user {{
+            color: rgba(255,255,255,0.85) !important;
+        }}
+        .st-key-hero_band [data-testid="stBaseButton-secondary"] {{
+            background: rgba(255,255,255,0.14) !important;
+            border: 1px solid rgba(255,255,255,0.5) !important;
+            color: #FFFFFF !important;
+        }}
+        .st-key-hero_band [data-testid="stBaseButton-secondary"]:hover {{
+            background: rgba(255,255,255,0.28) !important;
+        }}
+
+        /* Accent-block metric tiles instead of flat bordered boxes. */
+        div[data-testid="stMetric"] {{
+            background: linear-gradient(160deg, #FFFFFF 0%, {BRAND_AMBER}26 100%) !important;
+            border: 1px solid {BRAND_AMBER}66 !important;
+            border-radius: 18px !important;
+            box-shadow: 0 10px 24px -16px {BRAND_INDIGO}59 !important;
+            padding: 0.9rem 1.1rem 0.6rem 1.1rem !important;
+        }}
+        div[data-testid="stMetricValue"] {{
+            background: linear-gradient(90deg, {BRAND_INDIGO}, {BRAND_ACCENT});
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }}
+        /* Today's two hero metrics get extra size -- they're the one thing
+        this screen wants you to see first. Scoped so it doesn't also blow
+        out Insights' narrower 4-up metric row. */
+        .st-key-today_hero div[data-testid="stMetricValue"] {{
+            font-size: 3rem;
+        }}
+
+        /* Gradient primary buttons with real lift, in place of flat fills. */
+        [data-testid="stBaseButton-primaryFormSubmit"],
+        [data-testid="stBaseButton-primary"] {{
+            background: linear-gradient(135deg, {BRAND_INDIGO} 0%, #4B3F8C 100%) !important;
+            border: none !important;
+            box-shadow: 0 12px 26px -12px {BRAND_INDIGO}8c;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }}
+        [data-testid="stBaseButton-primaryFormSubmit"]:hover,
+        [data-testid="stBaseButton-primary"]:hover {{
+            transform: translateY(-1px);
+            box-shadow: 0 16px 30px -12px {BRAND_INDIGO}a3;
+        }}
+
+        /* Depth for every bordered container: soft shadow + rounder corners
+        instead of a flat 1px border doing all the work. */
+        [data-testid="stVerticalBlockBorderWrapper"] {{
+            border-radius: 20px !important;
+            box-shadow: 0 14px 32px -22px {BRAND_INDIGO}66;
+        }}
+
+        /* Login card: same shadow/gradient treatment as the rest. */
+        [data-testid="stForm"] {{
+            background: linear-gradient(180deg, #FFFFFF 0%, {BRAND_AMBER}12 100%);
+            border-radius: 22px !important;
+            box-shadow: 0 22px 48px -22px {BRAND_INDIGO}66;
+            padding: 1.75rem 1.75rem 1.25rem 1.75rem;
+        }}
+
+        /* Glowing radial backdrop behind the Redeem tree hero. */
+        .tree-hero-glow {{
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }}
+        .tree-hero-glow::before {{
+            content: "";
+            position: absolute;
+            width: 230px;
+            height: 230px;
+            border-radius: 50%;
+            background: radial-gradient(circle, {BRAND_AMBER}80 0%, {BRAND_AMBER}00 72%);
+        }}
+        .tree-hero-glow .tree-emoji {{
+            position: relative;
+            font-size: 150px;
+            line-height: 1.1;
+            filter: drop-shadow(0 16px 22px {BRAND_INDIGO}59);
         }}
         </style>
         """,
@@ -176,11 +280,12 @@ def today_page(user_id):
 
     # Hero first: where you stand today, before anything else asks for input.
     st.caption(date.today().strftime("%A, %B %-d"))
-    hcol1, hcol2 = st.columns(2)
-    with hcol1:
-        st.metric("Productive today", f"{pct * 100:.0f}%", border=True)
-    with hcol2:
-        st.metric("🎟️ Tokens", token_balance, border=True)
+    with st.container(key="today_hero"):
+        hcol1, hcol2 = st.columns(2)
+        with hcol1:
+            st.metric("Productive today", f"{pct * 100:.0f}%", border=True)
+        with hcol2:
+            st.metric("🎟️ Tokens", token_balance, border=True)
     st.caption(
         f"**{productive_hours:.2f}h** productive / **{total_hours:.2f}h** logged "
         f"-- cross {rewards.PRODUCTIVITY_THRESHOLD * 100:.0f}% to earn a token"
@@ -481,7 +586,7 @@ def redeem_page(user_id):
 
     with st.container(border=True):
         st.markdown(
-            f"<div style='font-size:140px;text-align:center;line-height:1.15'>{emoji}</div>",
+            f"<div class='tree-hero-glow'><span class='tree-emoji'>{emoji}</span></div>",
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -534,31 +639,44 @@ NAV_OPTIONS = ["🏠 Today", "📊 Insights", "🎁 Redeem"]
 
 
 def main():
-    # Everything the app can show -- login or authenticated -- is rendered
-    # inside a single st.empty() placeholder so a run only ever has one of
-    # the two branches' markup on the page, never a transient mix of both.
-    body = st.empty()
-    with body.container():
-        inject_css()
+    # Login and the authenticated view use different st.columns() shapes
+    # ([1,2,1] vs [4,1]). Streamlit's frontend reconciles a run's elements by
+    # structural position, not by which branch produced them, so a single
+    # shared st.empty() container isn't enough to prevent the two shapes'
+    # content from briefly overlapping mid-transition: the incoming branch's
+    # first column can get painted into the DOM slot the outgoing branch's
+    # first column occupied, before that slot is cleared. Giving each branch
+    # its own placeholder -- and explicitly emptying the *other* one first --
+    # forces an immediate clear delta so the two shapes never share a slot.
+    login_slot = st.empty()
+    app_slot = st.empty()
 
-        if "user" not in st.session_state:
+    if "user" not in st.session_state:
+        app_slot.empty()
+        with login_slot.container():
+            inject_css()
             login_screen()
-            return
+        return
+
+    login_slot.empty()
+    with app_slot.container():
+        inject_css()
 
         user = st.session_state["user"]
         style_metric_cards(border_left_color=BRAND_ACCENT, box_shadow=False)
 
-        header_left, header_right = st.columns([4, 1])
-        with header_left:
-            st.markdown("<h2 style='margin-bottom:0'>⏳ Hourglass</h2>", unsafe_allow_html=True)
-        with header_right:
-            st.markdown(
-                f"<p style='text-align:right;opacity:0.7;margin-bottom:0.25rem'>{user['username']}</p>",
-                unsafe_allow_html=True,
-            )
-            if st.button("Log out", width="stretch"):
-                del st.session_state["user"]
-                st.rerun()
+        with st.container(key="hero_band"):
+            header_left, header_right = st.columns([4, 1])
+            with header_left:
+                st.markdown("<h2 style='margin-bottom:0'>⏳ Hourglass</h2>", unsafe_allow_html=True)
+            with header_right:
+                st.markdown(
+                    f"<p class='hero-user' style='text-align:right;margin-bottom:0.25rem'>{user['username']}</p>",
+                    unsafe_allow_html=True,
+                )
+                if st.button("Log out", width="stretch"):
+                    del st.session_state["user"]
+                    st.rerun()
 
         st.write("")
         nav = st.segmented_control(
