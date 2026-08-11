@@ -181,74 +181,12 @@ def _new_sub_category_form(category):
                 st.warning("Sub-category name is required.", icon="🙈")
 
 
-def logging_page(user_id):
+def today_page(user_id):
     if st.session_state.pop("celebrate_token", False):
         st.balloons()
         st.success(random.choice(CELEBRATION_MESSAGES), icon="\U0001FA99")
 
     token_balance = db.get_unredeemed_token_count(user_id)
-    if token_balance > 0:
-        plural = "s" if token_balance != 1 else ""
-        st.info(
-            f"🎁 You have {token_balance} token{plural} waiting -- "
-            f"pop over to the **Redeem** tab to grow your tree!",
-            icon="🎁",
-        )
-
-    categories = db.get_categories(user_id)
-
-    if not categories:
-        st.info("Add a category to start logging time.")
-        with st.popover("➕ Add a category"):
-            _new_category_form(user_id)
-        return
-
-    category_names = [c["name"] for c in categories]
-    cat_col, cat_add_col, sub_col, sub_add_col = st.columns([3, 1, 3, 1])
-    with cat_col:
-        selected_category_name = st.selectbox("Category", category_names, key="selected_category")
-    selected_category = next(c for c in categories if c["name"] == selected_category_name)
-    with cat_add_col:
-        st.markdown(f"<div style='height:{SPACE_MD}'></div>", unsafe_allow_html=True)
-        with st.popover("➕", help="Add a new category"):
-            _new_category_form(user_id)
-
-    sub_categories = db.get_sub_categories(selected_category["id"])
-    sub_options = ["None"] + [s["name"] for s in sub_categories]
-    with sub_col:
-        selected_sub_name = st.selectbox("Sub-category", sub_options)
-    selected_sub = next((s for s in sub_categories if s["name"] == selected_sub_name), None)
-    with sub_add_col:
-        st.markdown(f"<div style='height:{SPACE_MD}'></div>", unsafe_allow_html=True)
-        with st.popover("➕", help=f"Add a sub-category to {selected_category_name}"):
-            _new_sub_category_form(selected_category)
-
-    with st.form("log_form", clear_on_submit=True):
-        d_col, h_col, n_col = st.columns([2, 1, 3])
-        with d_col:
-            log_date = st.date_input("Date", value=date.today())
-        with h_col:
-            hours = st.number_input("Hours", min_value=0.0, step=0.5, format="%.2f")
-        with n_col:
-            note = st.text_input("Note (optional)")
-        submitted = st.form_submit_button("📝 Log time", type="primary", width="stretch")
-        if submitted:
-            if hours <= 0:
-                st.warning("Hours must be greater than 0.", icon="🙈")
-            else:
-                with spin():
-                    db.create_log(
-                        user_id,
-                        selected_category["id"],
-                        selected_sub["id"] if selected_sub else None,
-                        log_date,
-                        hours,
-                        note.strip() or None,
-                    )
-                    awarded = award_token_if_earned(user_id, log_date)
-                if awarded:
-                    st.session_state["celebrate_token"] = True
-                st.rerun()
 
     today_logs = db.get_logs_for_date(user_id, date.today())
     today_pure = [
@@ -257,17 +195,86 @@ def logging_page(user_id):
     ]
     total_hours, productive_hours, pct = rewards.compute_productivity(today_pure)
 
-    with st.container(border=True):
-        pcol, mcol = st.columns([3, 1])
-        with pcol:
-            st.caption(
-                f"🔥 Today: **{productive_hours:.2f}h** productive / **{total_hours:.2f}h** logged "
-                f"-- cross {rewards.PRODUCTIVITY_THRESHOLD * 100:.0f}% to earn a token"
-            )
-            st.progress(min(pct / rewards.PRODUCTIVITY_THRESHOLD, 1.0))
-        with mcol:
-            st.metric("🎟️ Tokens", token_balance)
+    # Hero first: where you stand today, before anything else asks for input.
+    st.caption(date.today().strftime("%A, %B %-d"))
+    hcol1, hcol2 = st.columns(2)
+    with hcol1:
+        st.metric("Productive today", f"{pct * 100:.0f}%", border=True)
+    with hcol2:
+        st.metric("🎟️ Tokens", token_balance, border=True)
+    st.caption(
+        f"**{productive_hours:.2f}h** productive / **{total_hours:.2f}h** logged "
+        f"-- cross {rewards.PRODUCTIVITY_THRESHOLD * 100:.0f}% to earn a token"
+    )
+    st.progress(min(pct / rewards.PRODUCTIVITY_THRESHOLD, 1.0))
 
+    if token_balance > 0:
+        plural = "s" if token_balance != 1 else ""
+        st.info(
+            f"🎁 You have {token_balance} token{plural} waiting -- "
+            f"switch to **Redeem** above to grow your tree!",
+            icon="🎁",
+        )
+
+    st.write("")
+    categories = db.get_categories(user_id)
+
+    if not categories:
+        st.info("Add a category to start logging time.")
+        with st.popover("➕ Add a category"):
+            _new_category_form(user_id)
+        return
+
+    # The one primary action on this screen: log time.
+    with st.container(border=True):
+        category_names = [c["name"] for c in categories]
+        cat_col, cat_add_col, sub_col, sub_add_col = st.columns([3, 1, 3, 1])
+        with cat_col:
+            selected_category_name = st.selectbox("Category", category_names, key="selected_category")
+        selected_category = next(c for c in categories if c["name"] == selected_category_name)
+        with cat_add_col:
+            st.markdown(f"<div style='height:{SPACE_MD}'></div>", unsafe_allow_html=True)
+            with st.popover("➕", help="Add a new category"):
+                _new_category_form(user_id)
+
+        sub_categories = db.get_sub_categories(selected_category["id"])
+        sub_options = ["None"] + [s["name"] for s in sub_categories]
+        with sub_col:
+            selected_sub_name = st.selectbox("Sub-category", sub_options)
+        selected_sub = next((s for s in sub_categories if s["name"] == selected_sub_name), None)
+        with sub_add_col:
+            st.markdown(f"<div style='height:{SPACE_MD}'></div>", unsafe_allow_html=True)
+            with st.popover("➕", help=f"Add a sub-category to {selected_category_name}"):
+                _new_sub_category_form(selected_category)
+
+        with st.form("log_form", clear_on_submit=True):
+            d_col, h_col, n_col = st.columns([2, 1, 3])
+            with d_col:
+                log_date = st.date_input("Date", value=date.today())
+            with h_col:
+                hours = st.number_input("Hours", min_value=0.0, step=0.5, format="%.2f")
+            with n_col:
+                note = st.text_input("Note (optional)")
+            submitted = st.form_submit_button("📝 Log time", type="primary", width="stretch")
+            if submitted:
+                if hours <= 0:
+                    st.warning("Hours must be greater than 0.", icon="🙈")
+                else:
+                    with spin():
+                        db.create_log(
+                            user_id,
+                            selected_category["id"],
+                            selected_sub["id"] if selected_sub else None,
+                            log_date,
+                            hours,
+                            note.strip() or None,
+                        )
+                        awarded = award_token_if_earned(user_id, log_date)
+                    if awarded:
+                        st.session_state["celebrate_token"] = True
+                    st.rerun()
+
+    st.write("")
     with st.expander("📜 History"):
         col1, col2 = st.columns(2)
         with col1:
@@ -544,35 +551,53 @@ def redeem_page(user_id):
         st.caption("Grow your first full tree to start your forest \U0001F333")
 
 
+NAV_OPTIONS = ["🏠 Today", "📊 Insights", "🎁 Redeem"]
+
+
 def main():
-    inject_css()
-    style_metric_cards(border_left_color=BRAND_ACCENT, box_shadow=False)
+    # Everything the app can show -- login or authenticated -- is rendered
+    # inside a single st.empty() placeholder so a run only ever has one of
+    # the two branches' markup on the page, never a transient mix of both.
+    body = st.empty()
+    with body.container():
+        inject_css()
 
-    if "user" not in st.session_state:
-        login_screen()
-        return
+        if "user" not in st.session_state:
+            login_screen()
+            return
 
-    user = st.session_state["user"]
+        user = st.session_state["user"]
+        style_metric_cards(border_left_color=BRAND_ACCENT, box_shadow=False)
 
-    header_left, header_right = st.columns([4, 1])
-    with header_left:
-        st.markdown("<h2 style='margin-bottom:0'>⏳ Hourglass</h2>", unsafe_allow_html=True)
-    with header_right:
-        st.markdown(
-            f"<p style='text-align:right;opacity:0.7;margin-bottom:0.25rem'>{user['username']}</p>",
-            unsafe_allow_html=True,
+        header_left, header_right = st.columns([4, 1])
+        with header_left:
+            st.markdown("<h2 style='margin-bottom:0'>⏳ Hourglass</h2>", unsafe_allow_html=True)
+        with header_right:
+            st.markdown(
+                f"<p style='text-align:right;opacity:0.7;margin-bottom:0.25rem'>{user['username']}</p>",
+                unsafe_allow_html=True,
+            )
+            if st.button("Log out", width="stretch"):
+                del st.session_state["user"]
+                st.rerun()
+
+        st.write("")
+        nav = st.segmented_control(
+            "Navigate",
+            NAV_OPTIONS,
+            default=NAV_OPTIONS[0],
+            key="nav_view",
+            label_visibility="collapsed",
+            required=True,
         )
-        if st.button("Log out", width="stretch"):
-            del st.session_state["user"]
-            st.rerun()
+        st.write("")
 
-    tab_log, tab_insights, tab_redeem = st.tabs(["📝 Log Time", "📊 Insights", "🎁 Redeem"])
-    with tab_log:
-        logging_page(user["id"])
-    with tab_insights:
-        insights_page(user["id"])
-    with tab_redeem:
-        redeem_page(user["id"])
+        if nav == NAV_OPTIONS[1]:
+            insights_page(user["id"])
+        elif nav == NAV_OPTIONS[2]:
+            redeem_page(user["id"])
+        else:
+            today_page(user["id"])
 
 
 if __name__ == "__main__":
