@@ -1,0 +1,5 @@
+streamlit
+supabase
+passlib[bcrypt]
+python-dotenv
+pytest
